@@ -15,13 +15,16 @@ class PlayerManager {
     init(_ dict:[String: AnyObject]) {
         if let allPlayers = dict["allPlayers"] {
             for player in allPlayers as! NSArray  {
-                 items.append(Player(player as? [String: AnyObject]))
+                guard let playerDic = player as? [String: AnyObject]  else {
+                    continue
+                }
+                 items.append(Player(playerDic))
             }
         }
     }
     
-    func playerById(_ playerId:Int) -> Player? {
-        return items.filter({ $0.playerID == playerId }).first
+    func playerById(_ playerId:Int) -> Player {
+        return items.filter({ $0.playerId == playerId }).first!
     }
     
 }

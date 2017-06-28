@@ -12,43 +12,50 @@ class StatisticViewController: UIViewController {
     
     @IBOutlet weak var teamSegmentControl: UISegmentedControl!
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
-    
-    var playerGridView = NGridView()
-    var teamGridView = NGridView()
+    @IBOutlet weak var headerCollectionView:UICollectionView!
+    @IBOutlet weak var playerCollectionView:UICollectionView!
+    @IBOutlet weak var footerCollectionView:UICollectionView!
     
     let dataManager = DataManager()
-    let playerNameColumnWidth:CGFloat = 150.0 // Ширина колонки с именами игроков
-    let teamGridHeight: CGFloat = 80.0 // Высота итоговой таблицы по команде
-    let playerNameColumn = 1
+    
+    let numberOfHeaderSection = 1 // Количество секций в хедере
+    let numberOfFooterSection = 2 // Количество секций в футере
+    let nameColumnWidth:CGFloat = 170.0 // Ширина колонки с именами игроков
+    let nameColumn = 1
     
     override func viewDidLoad() {
         super.viewDidLoad()
         self.title = "Instat"
         self.teamSegmentControl.removeAllSegments()
+        initialize()
         
         dataManager.fetch {
             DispatchQueue.main.async {
                 self.title = self.dataManager.match?.title.uppercased()
                 self.setupSegmentController()
-                
-                self.reloadGridViews()
+                self.reloadCollectionViews()
+                self.headerCollectionView.reloadData()
+                self.headerCollectionView.isHidden = false
+                self.footerCollectionView.isHidden = false
                 self.activityIndicator.stopAnimating()
             }
-            
         }
-        
-        initialize()
     }
     
+    func initialize() {
+        headerCollectionView.isHidden = true
+        footerCollectionView.isHidden = true
+        setupCollectionView()
+    }
     
-    private func reloadGridViews() {
-        playerGridView.reloadData()
-        teamGridView.reloadData()
+     func reloadCollectionViews() {
+        playerCollectionView.reloadData()
+        footerCollectionView.reloadData()
     }
     
     @IBAction func selectTeam() {
         dataManager.selectTeam(teamSegmentControl.selectedSegmentIndex)
-        reloadGridViews()
+        reloadCollectionViews()
     }
     
     func setupSegmentController() {
@@ -59,212 +66,219 @@ class StatisticViewController: UIViewController {
     
 }
 
-extension StatisticViewController: NGridDataSource, NGridDelegate {
+
+extension StatisticViewController: UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
     
-    func initialize() {
-        
-        // Here the place to paste yout license key.
-        let licenseKey = "GaxT1nt+11dpEXTY/Ve6dCwO6NR4lnCLfGdClOyPbIA/LfgaBM/bxAYcS4+/Vc8dphBemoaW6nkHHI7RLXe7XXAkJeddKA+ZUR8PTwy2GpQtAgphmACNdXLNc4WzWweWm81TXwjbj+0IeMbYI/ToA0gXDQFAmkjHCPfEAKtzbu0EZVGaEXNNFGZmE4mFaf5xAyc9HH0w9pdYLB3EUJj0uJgBnK+wPk7Cztjcm2uWknJTsTs5/I2YOIxK0YCpU2iumL3o6T8cJMuBSWHEKESs5D5cT5FGoCb3Dd3HDfFID1caKG02P9VyJ3nuxbKNPDEWR+Xr2GgqLElfOyhE8wpIT+ALlxV+Zr6AH65+PLrVmfUyrg+SIN5Wh0Fj1rFk6XdcTJsGAGHvRSx7Awz6A7O9XH78+nLXChILwqt4pk1Ei8k+V0R8eafElwKpepeKax3xsrwkXbOI/+5tCNxv6QcPuJ2Q96ps3mztqS1dttzlBixSVpkRN6rnZuUM9DfSyw2U6cgnA6i2ecJe+3jIGzgc+6UsWUPuhZTuc83q9IRwrrkkdsieH0t9jpm8mgBBYldPVwLl/VYiZTNLUIkU93SWR6awAyiljgnDmeYziCUQ0av2qtJVLkatbO/6UqAjkPHokAE4edU/EqbYXksfE3oYkndaOFoL8Xaru71x4gm11T8="
-        
-        playerGridView.licenseKey = licenseKey
-        teamGridView.licenseKey = licenseKey
-        
-        playerGridView.tag = 0
-        teamGridView.tag = 1
-        
-        playerGridView.bounces = false
-        teamGridView.bounces = false
-        
-        playerGridView.dataSource = self
-        playerGridView.delegate = self
-        
-        teamGridView.dataSource = self
-        teamGridView.delegate = self
-        
-        setupAppearance(playerGridView)
-        setupAppearance(teamGridView)
-        
-        
-        let teamGridFrame = CGRect(x: 0, y: self.view.frame.size.height - teamGridHeight, width: self.view.frame.size.width, height: teamGridHeight)
-        teamGridView.frame = teamGridFrame
-        self.view.addSubview(teamGridView)
-        
-        let frame = teamSegmentControl.frame
-        let y = frame.origin.y + frame.size.height + 8
-        playerGridView.frame = CGRect(x: 0, y: y, width: self.view.frame.size.width, height: self.view.frame.size.height - y - teamGridHeight)
-        self.view.addSubview(playerGridView)
+    enum CollectionTag: Int {
+        case headerTag = 100
+        case playerTag
+        case footerTag
     }
     
-    func setupAppearance(_ gridView: NGridView) {
-        let columnHeaderCellStyle = NGridCellStyle.empty()!
-        columnHeaderCellStyle.backgroundColor = UIColor(red: 246.0/255.0, green: 246.0/255.0, blue: 246.0/255.0, alpha: 1.0)
-        columnHeaderCellStyle.setBorderColor(UIColor(red: 195.0/255.0, green: 195.0/255.0, blue: 195.0/255.0, alpha: 1.0))
-        columnHeaderCellStyle.textAlignment = NSTextAlignment.center;
-        columnHeaderCellStyle.textColor = UIColor(red: 50.0/255.0, green: 50.0/255.0, blue: 55.0/255.0, alpha: 1.0)
-        columnHeaderCellStyle.font = UIFont.boldSystemFont(ofSize: 14.0)
-        columnHeaderCellStyle.leftPadding = 7.0
-        columnHeaderCellStyle.rightPadding = 7.0
-        
-        let rowHeaderCellSyle = columnHeaderCellStyle.copy() as! NGridCellStyle
-        rowHeaderCellSyle.leftPadding = 25.0
-        rowHeaderCellSyle.textAlignment = NSTextAlignment.left
-        
-        let regularCellStyle = NGridCellStyle.default()!
-        regularCellStyle.textAlignment = NSTextAlignment.right
-        regularCellStyle.font = UIFont.systemFont(ofSize: 14.0)
-        regularCellStyle.textColor = UIColor(red: 70.0/255.0, green: 70.0/255.0, blue: 75.0/255.0, alpha: 1.0)
-        regularCellStyle.setBorderColor(UIColor(red: 195.0/255.0, green: 195.0/255.0, blue: 195.0/255.0, alpha: 1.0))
-        regularCellStyle.rightBorderDash = [1, 1]
-        regularCellStyle.bottomBorderDash = [1, 1]
-        regularCellStyle.leftBorderWidth = 0
-        regularCellStyle.rightBorderWidth = 1.0
-        regularCellStyle.leftPadding = 7.0
-        regularCellStyle.rightPadding = 7.0
-        regularCellStyle.textAlignment = .center
-        regularCellStyle.backgroundColorInterchange = true
-        regularCellStyle.firstInterchangedColor = UIColor(red: 253.0/255.0, green: 253.0/255.0, blue: 253.0/255.0, alpha: 1.0)
-        regularCellStyle.secondInterchangedColor = UIColor.white
-        
-        let styleManager = (gridView.proxyDataSource as! NGridProxyDataSourceImpl).styleManager()!
-        let styleLevel = styleManager.styleLevel(NGridStyleLevelOrder.level0)!
-        styleLevel.setDefaultStyleForColumnHeader(columnHeaderCellStyle)
-        styleLevel.setDefaultStyleForRowHeader(rowHeaderCellSyle)
-        styleLevel.setDefaultStyle(regularCellStyle)
+    enum Column: Int {
+        case header
+        case normal
     }
     
-    // MARK: Data source stuff
+    enum TeamSection: Int {
+        case average, total
+    }
     
-    func gridView(_ gridView: NGridView!, cellWith cellKey: NGridCellKey!) -> NGridCell! {
+    func setupCollectionView() {
+        headerCollectionView.tag = CollectionTag.headerTag.rawValue
+        playerCollectionView.tag = CollectionTag.playerTag.rawValue
+        footerCollectionView.tag = CollectionTag.footerTag.rawValue
         
-        var cell = gridView.dequeueReusableCell(withIdentifier: "CellID") as! NGridCommonCell!
-        if (cell == nil) {
-            cell = NGridCommonCell(reuseIdentifier: "CellID")
+        let headerFlow = UICollectionViewFlowLayout()
+        headerFlow.sectionInset = UIEdgeInsets.zero
+        headerFlow.minimumInteritemSpacing = 0
+        headerFlow.minimumLineSpacing = 0
+        headerCollectionView.collectionViewLayout = headerFlow
+        
+        let flow = UICollectionViewFlowLayout()
+        flow.sectionInset = UIEdgeInsets.zero
+        flow.minimumInteritemSpacing = 0
+        flow.minimumLineSpacing = 0
+        playerCollectionView.collectionViewLayout = flow
+        
+        let footerFlow = UICollectionViewFlowLayout()
+        footerFlow.sectionInset = UIEdgeInsets.zero
+        footerFlow.minimumInteritemSpacing = 0
+        footerFlow.minimumLineSpacing = 0
+        footerCollectionView.collectionViewLayout = footerFlow
+        
+        headerCollectionView.dataSource = self
+        headerCollectionView.delegate = self
+        
+        playerCollectionView.dataSource = self
+        playerCollectionView.delegate = self
+        
+        footerCollectionView.dataSource = self
+        footerCollectionView.delegate = self
+    }
+    
+    func numberOfSections(in collectionView: UICollectionView) -> Int {
+        var numberOfSection = 0
+        switch collectionView.tag {
+        case CollectionTag.headerTag.rawValue:
+            numberOfSection = numberOfHeaderSection
+            
+        case CollectionTag.playerTag.rawValue:
+            numberOfSection = dataManager.numberOfPlayers()
+            
+        case CollectionTag.footerTag.rawValue:
+            numberOfSection = numberOfFooterSection
+        default: break
+        }
+        return numberOfSection
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return  dataManager.numberOfParams() + nameColumn // Количество колонок в таблице
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        var cell = UICollectionViewCell()
+        
+        switch collectionView.tag {
+        case CollectionTag.headerTag.rawValue:
+            cell = setupHeaderCell(at: indexPath)
+            
+        case CollectionTag.playerTag.rawValue:
+            cell = setupPlayerCell(at: indexPath)
+            
+        case CollectionTag.footerTag.rawValue:
+            cell = setupFooterCell(at: indexPath)
+            
+        default:  break
         }
         
-        let cellValue = self.gridView(gridView, valueForCellWith: cellKey)
-        cell?.text = "\(cellValue!)"
+        cell.contentView.layer.borderWidth = 0.5
+        cell.contentView.layer.borderColor = UIColor.gray.cgColor
         return cell
     }
     
-    func gridView(_ gridView: NGridView!, valueForCellWith cellKey: NGridCellKey!) -> NSObject! {
-        
-        switch cellKey.type {
-        case .columnHeader:
-           
-            if gridView.tag == 0 {
-                let columnHeaderName = dataManager.columnHeaderName(by: cellKey.columnKey)
+    // UICollectionViewDelegateFlowLayout
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
                 
-                return columnHeaderName as NSObject!
-            } else {
-                var columnTeamHeaderName: String?
-                switch cellKey.rowKey {
-                case TeamHeaderSection.averageSection.rawValue:
-                    columnTeamHeaderName = dataManager.averageTeamStatisticHeader(by: cellKey.columnKey)
-                case TeamHeaderSection.totalSection.rawValue:
-                    columnTeamHeaderName = dataManager.totalTeamStatisticHeader(by: cellKey.columnKey)
-                default:
-                    break
-                }
-                
-                return columnTeamHeaderName as NSObject!
-            }
+        let height = heightCell(tag: collectionView.tag)
+        switch indexPath.item {
+        case Column.header.rawValue:
+            return CGSize(width: nameColumnWidth, height: height)
             
-        case .regular:
-            
-            if cellKey.columnKey == 0 {
-                if let playerName = dataManager.getPlayerName(byRow: cellKey.rowKey) {
-                    return playerName as NSObject!
-                }
-            } else {
-                if let playerStat = dataManager.getPlayerStatistic(byRow:cellKey.rowKey, byCol:cellKey.columnKey) {
-                    if let value = playerStat.value {
-                        return value as NSObject!
-                    } else if let leftVal = playerStat.valueLeft, let rightVal = playerStat.valueRight {
-                        return "\(leftVal) / \(rightVal)" as NSObject!
-                    }
-                    
-                }
-            }
         default:
-            break
+            let screenRect = collectionView.frame.size.width
+            let screenWidth = screenRect - nameColumnWidth
+            let cellWidth = screenWidth / CGFloat(dataManager.numberOfParams())
+            return CGSize(width: cellWidth, height: height)
         }
-        return String() as NSObject!
     }
     
+    // UICollectionViewDelegate
     
-    func gridViewRowCount(_ gridView: NGridView!) -> Int {
-        if gridView.tag == 0 {
-            return dataManager.numberOfPlayers()
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        
+        switch collectionView.tag {
+            
+        case CollectionTag.headerTag.rawValue:
+            dataManager.sortStatistics(byColumnIndex: indexPath)
+            let cell = collectionView.cellForItem(at: indexPath) as! HeaderCell
+            cell.showSortDirection(dataManager.sortDirection)
+            playerCollectionView.reloadData()
+            
+            
+        default: break
         }
-        return 0
     }
     
-    func gridViewColumnCount(_ gridView: NGridView!) -> Int {
-        return dataManager.numberOfParams() + playerNameColumn // Количество колонок в таблице игроков
-    }
-    
-    func gridViewRowHeaderCount(_ gridView: NGridView!) -> Int {
-        return 0
-    }
-    
-    func gridViewColumnHeaderCount(_ gridView: NGridView!) -> Int {
-        if gridView.tag == 0 {
-            return 1
+    func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
+        switch collectionView.tag {
+        case CollectionTag.headerTag.rawValue:
+            let cell = collectionView.cellForItem(at: indexPath) as! HeaderCell
+            cell.showSortDirection(.none)
+            playerCollectionView.reloadData()
+        default: break
         }
-        return 2
     }
     
-    // MARK: Delegate stuff
     
-    func gridView(_ gridView: NGridView!, didTap cell: NGridCell!) {
-        if gridView.tag == 0 {
-            // First, check type of cell. We need only header cells...
-            if (cell.key.type == NGridCellType.columnHeader) {
-                // ... when get sort settings
-                let settings = cell.parentGrid.sortSettings() as! NGridSortSettings!
-                // ... check is this row sorted
-                if (settings != nil && settings?.elementType == NGridSortElementType.column &&
-                    settings?.elementKey == cell.key.columnKey) {
-                    // ... and change sort direction
-                    if (settings?.direction == NGridSortDirection.asc) {
-                        settings?.direction = NGridSortDirection.desc
-                    } else if (settings?.direction == NGridSortDirection.desc) {
-                        settings?.direction = NGridSortDirection.none
-                    } else {
-                        settings?.direction = NGridSortDirection.asc
-                    }
-                    cell.parentGrid.setSortSettings(settings)
-                } else {
-                    // ... and create new sort setting
-                    let settings = NGridSortSettings()
-                    settings.elementKey = cell.key.columnKey;
-                    settings.elementType = NGridSortElementType.column;
-                    settings.direction = NGridSortDirection.asc;
-                    cell.parentGrid.setSortSettings(settings)
+    
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        headerCollectionView.reloadData()
+        playerCollectionView.reloadData()
+        footerCollectionView.reloadData()
+    }
+    
+    
+    func heightCell(tag:Int) -> CGFloat {
+        return tag == CollectionTag.headerTag.rawValue ? 70.0 : 50.0
+    }
+    
+    // Устанавливаем заголовок таблицы
+    func setupHeaderCell(at index:IndexPath) -> UICollectionViewCell {
+        let cell: UICollectionViewCell
+        let headerCell = headerCollectionView.dequeueReusableCell(withReuseIdentifier: "headerCell", for: index) as! HeaderCell
+        if let columnHeaderName = dataManager.columnHeaderName(by: index) {
+            headerCell.lblTitle.text = columnHeaderName
+        }
+        cell = headerCell
+        return cell
+    }
+    
+    // Устанавливаем имя и статистику игроков
+    func setupPlayerCell(at index:IndexPath) -> UICollectionViewCell {
+        let cell: UICollectionViewCell
+        
+        switch index.item {
+        case Column.header.rawValue:
+            let playerCell = playerCollectionView.dequeueReusableCell(withReuseIdentifier: "playerCell", for: index) as! PlayerCell
+            if let player = dataManager.player(at: index) {
+                if let name = player.name {
+                    playerCell.lblName.text = name
+                }
+                if let order = player.order {
+                    playerCell.lblOrder.text = String(order)
                 }
             }
+            cell = playerCell
+            
+        default:
+            let statCell = playerCollectionView.dequeueReusableCell(withReuseIdentifier: "statisticCell", for: index) as! StatisticCell
+            if let playerStat = dataManager.playerStatistic(at: index) {
+                if let value = playerStat.value {
+                    statCell.lblValue.text = String(value as Double)
+                } else if let leftVal = playerStat.valueLeft, let rightVal = playerStat.valueRight {
+                    statCell.lblValue.text = "\(leftVal) / \(rightVal)"
+                }
+            }
+            cell = statCell
         }
+        
+        return cell
     }
     
-    func gridView(_ gridView: NGridView!, widthForColumnWithKey columnKey: Int) -> CGFloat {
-        if columnKey == 0 {
-            return playerNameColumnWidth
+    // Устанавливаем статистику по команде в футер
+    func setupFooterCell(at index:IndexPath) -> UICollectionViewCell {
+        let cell: UICollectionViewCell
+        let footerCell = footerCollectionView.dequeueReusableCell(withReuseIdentifier: "footerCell", for: index) as! FooterCell
+        
+        switch index.section {
+        case TeamSection.average.rawValue:
+            if let footerName = dataManager.averageTeamStatistic(by: index)  {
+                footerCell.lblTitle.text = footerName
+            }
+            
+        case TeamSection.total.rawValue:
+            if let footerName = dataManager.totalTeamStatistic(by: index) {
+                footerCell.lblTitle.text = footerName
+            }
+            
+        default: break
         }
-        let columnParamWidth = (self.view.frame.width - playerNameColumnWidth) / CGFloat(dataManager.numberOfParams())
-        return columnParamWidth
-    }
-    
-    func gridView(_ gridView: NGridView!, heightForRowWithKey rowKey: Int) -> CGFloat {
-        return 50.0
-    }
-    
-    func gridView(_ gridView: NGridView!, widthForHeaderRowWithKey key: Int) -> CGFloat {
-        return 200.0
-    }
-    
-    func gridView(_ gridView: NGridView!, heightForHeaderColumnWithKey key: Int) -> CGFloat {
-        if gridView.tag == 0 { return 75.0 }
-        return teamGridHeight / 2.0
+        
+        cell = footerCell
+        return cell
     }
     
 }

@@ -17,12 +17,11 @@ extension Double {
     }
 }
 
-enum TeamHeaderSection: Int {
-    case averageSection
-    case totalSection
-}
-
 enum TeamIndex: Int {
     case homeTeam
     case guestTeam
+}
+
+enum SortDirection: Int {
+    case none, asc, desc
 }

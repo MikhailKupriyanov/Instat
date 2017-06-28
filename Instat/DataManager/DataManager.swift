@@ -10,13 +10,13 @@ import Foundation
 
 class DataManager {
     
-    private var items:[Player] = []
-    
     var match: Match?
-    var statistics: Statistics?
-    var playerManager: PlayerManager?
+    private var statistics: Statistics?
+    private var playerManager: PlayerManager?
     
     var selectedTeam: Team?
+    var sortDirection = SortDirection.asc
+    fileprivate var sortedColumnIndex = IndexPath() // Текущая колонка сортировки
     
     func fetch(completion:@escaping()-> Void) {
         let apiManager = APIManager()
@@ -32,9 +32,12 @@ class DataManager {
             
             // Для каждой команды добавляем статистику игроков
             if let statistics = self.statistics {
+                self.match?.teamHome?.manager = self.playerManager
                 self.match?.teamHome?.createTeamStatistic(statistics)
+                self.match?.teamGuest?.manager = self.playerManager
                 self.match?.teamGuest?.createTeamStatistic(statistics)
             }
+            
             self.selectedTeam = self.match?.teamHome
             completion()
         }
@@ -49,34 +52,37 @@ class DataManager {
         default:
             break
         }
+        if !sortedColumnIndex.isEmpty {
+            sortItems(by: sortedColumnIndex)
+        }
+       
     }
     
     // Наименование заголовков статистики
-    func columnHeaderName(by index:Int) -> String? {
-        if index == 0 {
+    func columnHeaderName(by index:IndexPath) -> String? {
+        if index.item == 0 {
             return "Player"
         }
-        
-        return statistics?.items[index - 1].name
+        return statistics?.items[index.item - 1].name
     }
     
     // Статистика по команде, Итого
-    func totalTeamStatisticHeader(by index:Int) -> String? {
-        if index == 0 {
+    func totalTeamStatistic(by index:IndexPath) -> String? {
+        if index.item == 0 {
             return "Total"
         }
-        return selectedTeam?.stats[index - 1].totalValue
+        return selectedTeam?.stats[index.item - 1].totalValue
     }
     
     // Статистика по команде, Среднее
-    func averageTeamStatisticHeader(by index:Int) -> String? {
-        if index == 0 {
+    func averageTeamStatistic(by index:IndexPath) -> String? {
+        if index.item == 0 {
             return "Average"
         }
-        return selectedTeam?.stats[index - 1].avgValue
+        return selectedTeam?.stats[index.item - 1].avgValue
     }
     
-    // Количество параметров
+    // Количество параметров статистики
     func numberOfParams() -> Int {
         guard let count = statistics?.items.count else {
             return 0
@@ -86,24 +92,83 @@ class DataManager {
     
     // Количество игроков в команде
     func numberOfPlayers() -> Int {
-        guard let count = selectedTeam?.stats[0].players.count else {
+        guard let count = selectedTeam?.players.count else {
             return 0
         }
         return count
     }
     
     // Имя игрока
-    func getPlayerName(byRow row:Int) -> String? {
-        var playerName: String?
-        if let teamStat = selectedTeam?.stats[0].players[row] {
-            playerName = playerManager?.playerById(teamStat.playerId!)?.name
-        }
-        return playerName
+    func player(at index:IndexPath) -> Player? {
+        return selectedTeam?.players[index.section]
     }
     
     // Получаем параметр статистики по игроку
-    func getPlayerStatistic(byRow row: Int, byCol col:Int) -> PlayerStatValue? {
-        return selectedTeam?.stats[col - 1].players[row]
+    func playerStatistic(at index:IndexPath) -> PlayerStatValue? {
+        return selectedTeam?.players[index.section].statistics[index.item - 1]
     }
     
+}
+
+extension DataManager {
+    
+    func sortStatistics(byColumnIndex index:IndexPath) {
+        sortedColumnIndex = index
+        
+        switch sortDirection {
+        case .asc:
+            sortDirection = .desc
+            
+        case .desc:
+            sortDirection = .asc
+            
+        default: break
+        }
+        
+        sortItems(by: index)
+    }
+    
+    fileprivate func sortItems(by index:IndexPath) {
+        
+        // Сортируем по имени игрока
+        if index.item == 0 {
+            switch sortDirection {
+            case .asc:
+                selectedTeam?.players.sort(by: { $0.name! < $1.name! })
+                
+            case .desc:
+                selectedTeam?.players.sort(by: { $0.name! > $1.name! })
+                
+            default: break
+            }
+            return
+        }
+        
+        // Сортируем по параметру статистики
+        selectedTeam?.players.sort(by: { (player1, player2) -> Bool in
+            if let value1 = player1.statistics[index.item - 1].value, let value2 = player2.statistics[index.item - 1].value {
+                switch sortDirection {
+                case .asc:
+                    if value1 < value2 { return true }
+                    
+                case .desc:
+                    if value1 > value2 { return true }
+                    
+                default: break
+                }
+                
+            } else if let valueLeft1 = player1.statistics[index.item - 1].valueLeft, let valueLeft2 = player2.statistics[index.item - 1].valueLeft, let valueRight1 = player1.statistics[index.item - 1].valueRight, let valueRight2 = player2.statistics[index.item - 1].valueRight {
+                switch sortDirection {
+                case .asc:
+                    if valueLeft1 <= valueLeft2 && valueRight1 <= valueRight2 { return true }
+                    
+                case .desc:
+                    if valueLeft1 >= valueLeft2 && valueRight1 >= valueRight2 { return true }
+                    
+                default: break
+                }
+            }
+            return false
+        })
+    }
 }
